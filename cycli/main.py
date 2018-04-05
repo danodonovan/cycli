@@ -43,10 +43,11 @@ def split_queries_on_semicolons(queries):
 
 
 class Cycli:
-  def __init__(self, host, port, username, password, logfile, filename, ssl, read_only, timeout):
+  def __init__(self, host, port, username, password, logfile, filename, ssl, read_only, timeout, no_echo):
     self.logfile = logfile
     self.filename = filename
     self.read_only = read_only
+    self.no_echo = no_echo
     self.neo4j = Neo4j(host, port, username, password, ssl, timeout)
     self.cypher = Cypher()
 
@@ -75,6 +76,10 @@ class Cycli:
 
     csvfile.close()
 
+  def print(self, text):
+      if not self.no_echo:
+          print(text)
+
   def run(self):
     labels = self.neo4j.get_labels()
     relationship_types = self.neo4j.get_relationship_types()
@@ -85,9 +90,9 @@ class Cycli:
         queries = split_queries_on_semicolons(f.read())
 
         for query in queries:
-          print("> " + query)
+          self.print("> " + query)
           self.handle_query(query)
-          print()
+          self.print()
 
         return
 
@@ -264,7 +269,8 @@ def print_help():
 @click.option("-f", "--filename", type=click.Path(exists=True), help="Execute semicolon-separated Cypher queries from a file.")
 @click.option("-s", "--ssl", is_flag=True, help="Use the HTTPS protocol.")
 @click.option("-r", "--read-only", is_flag=True, help="Do not allow any write queries.")
-def run(host, port, username, version, timeout, password, logfile, filename, ssl, read_only):
+@click.option("--no-echo", is_flag=True, help="Do not echo queries in console.")
+def run(host, port, username, version, timeout, password, logfile, filename, ssl, read_only, no_echo):
   if version:
     print("cycli {}".format(__version__))
     sys.exit(0)
@@ -273,7 +279,7 @@ def run(host, port, username, version, timeout, password, logfile, filename, ssl
     password = click.prompt("Password", hide_input=True, show_default=False, type=str)
 
   try:
-    cycli = Cycli(host, port, username, password, logfile, filename, ssl, read_only, timeout)
+    cycli = Cycli(host, port, username, password, logfile, filename, ssl, read_only, timeout, no_echo)
   except AuthError:
     print("Unauthorized. See cycli --help for authorization instructions.")
   except ConnectionError:
